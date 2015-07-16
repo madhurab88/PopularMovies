@@ -7,6 +7,8 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
+import com.squareup.picasso.Picasso;
+
 /**
  * Created by Madhu on 7/15/15.
  */
@@ -32,21 +34,21 @@ public class ImageAdapter extends BaseAdapter {
 
     // create a new ImageView for each item referenced by the Adapter
     public View getView(int position, View convertView, ViewGroup parent) {
+
         ImageView imageView;
+        //check to see if we have a view
         if (convertView == null) {
-            // if it's not recycled, initialize some attributes
             imageView = new ImageView(imageContext);
-            imageView.setLayoutParams(new GridView.LayoutParams(185, 185));
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            //imageView.setPadding(8, 8, 8, 8);
         } else {
             imageView = (ImageView) convertView;
         }
 
-        imageView.setImageResource(sampleImages[position]);
+        Picasso.with(imageContext).load(sampleImages[position])
+                                  .noFade().resize(342,342)
+                                  .centerCrop()
+                                  .into(imageView);
         return imageView;
     }
-
     // references to our images
     private Integer[] sampleImages = {
             R.drawable.sample_2, R.drawable.sample_3,
