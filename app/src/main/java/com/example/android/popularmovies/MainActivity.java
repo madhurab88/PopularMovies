@@ -17,9 +17,6 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        GridView gridview = (GridView) findViewById(R.id.grid_item_movies);
-        gridview.setAdapter(new ImageAdapter(this));
-
         /*gridview.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View v,
                                     int position, long id) {

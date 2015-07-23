@@ -4,7 +4,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.GridView;
+
 import android.widget.ImageView;
 
 import com.squareup.picasso.Picasso;
@@ -35,6 +35,7 @@ public class ImageAdapter extends BaseAdapter {
     // create a new ImageView for each item referenced by the Adapter
     public View getView(int position, View convertView, ViewGroup parent) {
 
+
         ImageView imageView;
         //check to see if we have a view
         if (convertView == null) {
@@ -43,7 +44,8 @@ public class ImageAdapter extends BaseAdapter {
             imageView = (ImageView) convertView;
         }
 
-        Picasso.with(imageContext).load(sampleImages[position])
+        //String moviePosterUrl = PosterPathURL;
+        Picasso.with(imageContext).load("http://image.tmdb.org/t/p/w185/nBNZadXqJSdt05SHLqgT0HuC5Gm.jpg")
                                   .noFade().resize(185,185)
                                   .centerCrop()
                                   .into(imageView);

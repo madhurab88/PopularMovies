@@ -1,6 +1,7 @@
 package com.example.android.popularmovies;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -33,6 +34,9 @@ import java.util.List;
  */
 public class PopularMoviesFragment extends Fragment {
 
+    String[] moviePosterPathURLArray;
+
+
     public PopularMoviesFragment() {
     }
 
@@ -48,36 +52,62 @@ public class PopularMoviesFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+        GridView gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
+        gridview.setAdapter(new ImageAdapter(getActivity()));
         return rootView;
     }
 
-    /*private String[] getImagesofMoviesfromJSON(String moviespathJsonStr) throws JSONException{
+    @Override
+    public void onStart() {
+        super.onStart();
+    }
 
 
-        final String mdb_results = "results";
-
-
-        JSONObject Imagesjsonobj = new JSONObject(moviespathJsonStr);
-        JSONArray ResultsArray = Imagesjsonobj.getJSONArray(mdb_results);
-
-
-
-        for(int i = 0; i < ResultsArray.length(); i++) {
-
-            String backdrop_pathobj = ResultsArray.getJSONObject(1).toString();
-            System.out.println( "results Array,backdrop_path " + backdrop_pathobj);
-
-
-        }
-
-
-        return resultImageStrs;
-
-    }*/
 
     public class fetchMoviesTask extends AsyncTask <Void, Void, Void> {
 
         private final String LOG_TAG = fetchMoviesTask.class.getSimpleName();
+
+        private String[] getMoviesDataFromJson(String moviesDetailsJsonStr) throws JSONException {
+
+            final String mdb_results = "results";
+            JSONObject movieDetailsobj = new JSONObject(moviesDetailsJsonStr);
+            JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
+
+
+             moviePosterPathURLArray = new String[ResultsArray.length()];
+            for(int i = 0; i < ResultsArray.length(); i++) {
+
+                JSONObject resultsObj = ResultsArray.getJSONObject(i);
+
+                String moviesTitle = "title";
+                String moviePosterPath = "poster_path";
+                String movieOverview = "overview";
+                String moviesVoteAverage = "vote_average";
+                String moviesReleaseDate = "release_date";
+                final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
+                final String imageSize = "w185";
+
+                String Title = resultsObj.getString(moviesTitle);
+                String PosterPath = resultsObj.getString(moviePosterPath);
+                String PosterPathURL = baseURLMovieImagesURL+imageSize+PosterPath;
+                String Overview = resultsObj.getString(movieOverview);
+                String VoteAverage = resultsObj.getString(moviesVoteAverage);
+                String ReleaseDate = resultsObj.getString(moviesReleaseDate);
+
+                moviePosterPathURLArray[i] = PosterPathURL;
+
+                    /*System.out.println( "moviesTitle: " + Title);
+                    System.out.println( "moviePosterPathURL: " + PosterPathURL);
+                    System.out.println( "arraycontent " + moviePosterPathURLArray[i]);
+                    System.out.println( "movieOverview: " + Overview);
+                    System.out.println( "moviesVoteAverage: " + VoteAverage);
+                    System.out.println( "moviesReleaseDate: " + ReleaseDate);*/
+            }
+            return moviePosterPathURLArray;
+
+        }
+
 
         @SuppressLint("LongLogTag")
         @Override
@@ -139,40 +169,13 @@ public class PopularMoviesFragment extends Fragment {
                 moviesDetailsJsonStr = buffer.toString();
                 Log.v(LOG_TAG, "MoviepathJSONString" + moviesDetailsJsonStr.toString());
 
-
-                final String mdb_results = "results";
-                JSONObject movieDetailsobj = new JSONObject(moviesDetailsJsonStr);
-                JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
-
-
-
-                for(int i = 0; i < ResultsArray.length(); i++) {
-
-                    JSONObject resultsObj = ResultsArray.getJSONObject(i);
-
-                    String moviesTitle = "title";
-                    String moviePosterPath = "poster_path";
-                    String movieOverview = "overview";
-                    String moviesVoteAverage = "vote_average";
-                    String moviesReleaseDate = "release_date";
-                    final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
-                    final String imageSize = "w185";
-
-                    String Title = resultsObj.getString(moviesTitle);
-                    String PosterPath = resultsObj.getString(moviePosterPath);
-                    String PosterPathURL = baseURLMovieImagesURL+imageSize+PosterPath;
-                    String Overview = resultsObj.getString(movieOverview);
-                    String VoteAverage = resultsObj.getString(moviesVoteAverage);
-                    String ReleaseDate = resultsObj.getString(moviesReleaseDate);
-
-                    System.out.println( "moviesTitle: " + Title);
-                    System.out.println( "moviePosterPathURL: " + PosterPathURL);
-                    System.out.println( "movieOverview: " + Overview);
-                    System.out.println( "moviesVoteAverage: " + VoteAverage);
-                    System.out.println( "moviesReleaseDate: " + ReleaseDate);
-
-
+                try {
+                    getMoviesDataFromJson(moviesDetailsJsonStr);
+                } catch (JSONException e) {
+                    Log.v(LOG_TAG, "JSONException");
                 }
+
+
 
 
             } catch (IOException e) {
@@ -180,9 +183,7 @@ public class PopularMoviesFragment extends Fragment {
                 // If the code didn't successfully get the weather data, there's no point in attemping
                 // to parse it.
                 return null;
-            } catch (JSONException e) {
-                Log.v(LOG_TAG, "JSONexception");
-            } finally{
+            }  finally{
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
