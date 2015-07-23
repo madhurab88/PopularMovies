@@ -1,15 +1,22 @@
 package com.example.android.popularmovies;
 
+import android.annotation.SuppressLint;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,20 +37,49 @@ public class PopularMoviesFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-
-
-
-        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-
-        return rootView;
-
+    public void onCreate(Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                // Add this line in order for this fragment to handle menu events.
+        fetchMoviesTask moviestask = new fetchMoviesTask();
+        moviestask.execute();
     }
 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+        return rootView;
+    }
+
+    /*private String[] getImagesofMoviesfromJSON(String moviespathJsonStr) throws JSONException{
+
+
+        final String mdb_results = "results";
+
+
+        JSONObject Imagesjsonobj = new JSONObject(moviespathJsonStr);
+        JSONArray ResultsArray = Imagesjsonobj.getJSONArray(mdb_results);
+
+
+
+        for(int i = 0; i < ResultsArray.length(); i++) {
+
+            String backdrop_pathobj = ResultsArray.getJSONObject(1).toString();
+            System.out.println( "results Array,backdrop_path " + backdrop_pathobj);
+
+
+        }
+
+
+        return resultImageStrs;
+
+    }*/
 
     public class fetchMoviesTask extends AsyncTask <Void, Void, Void> {
 
+        private final String LOG_TAG = fetchMoviesTask.class.getSimpleName();
+
+        @SuppressLint("LongLogTag")
         @Override
         protected Void doInBackground(Void... params) {
 
@@ -53,12 +89,25 @@ public class PopularMoviesFragment extends Fragment {
             BufferedReader reader = null;
 
             // Will contain the raw JSON response as a string.
-            String moviespathJsonStr = null;
+            String moviesDetailsJsonStr = null;
+            String query_string = "popularity.desc";
+            String api_key_value = "ec68b0639a7fadca7767c9f77b4e6c0b";
 
             try {
                 // Construct the URL for the themoviedb.org API for query
 
-                URL url = new URL("http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc&api_key=ec68b0639a7fadca7767c9f77b4e6c0b");
+                //URL url = new URL("http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc&api_key=ec68b0639a7fadca7767c9f77b4e6c0b");
+
+                final String FORECAST_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
+                final String QUERY_PARAM = "sort_by";
+                final String API_KEY = "api_key";
+                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
+                                               .appendQueryParameter(QUERY_PARAM,query_string)
+                                                .appendQueryParameter(API_KEY,api_key_value)
+                                                .build();
+
+                URL url = new URL(builtUri.toString());
+                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
                 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -86,12 +135,53 @@ public class PopularMoviesFragment extends Fragment {
                     // Stream was empty.  No point in parsing.
                     return null;
                 }
-                moviespathJsonStr = buffer.toString();
+
+                moviesDetailsJsonStr = buffer.toString();
+                Log.v(LOG_TAG, "MoviepathJSONString" + moviesDetailsJsonStr.toString());
+
+
+                final String mdb_results = "results";
+                JSONObject movieDetailsobj = new JSONObject(moviesDetailsJsonStr);
+                JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
+
+
+
+                for(int i = 0; i < ResultsArray.length(); i++) {
+
+                    JSONObject resultsObj = ResultsArray.getJSONObject(i);
+
+                    String moviesTitle = "title";
+                    String moviePosterPath = "poster_path";
+                    String movieOverview = "overview";
+                    String moviesVoteAverage = "vote_average";
+                    String moviesReleaseDate = "release_date";
+                    final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
+                    final String imageSize = "w185";
+
+                    String Title = resultsObj.getString(moviesTitle);
+                    String PosterPath = resultsObj.getString(moviePosterPath);
+                    String PosterPathURL = baseURLMovieImagesURL+imageSize+PosterPath;
+                    String Overview = resultsObj.getString(movieOverview);
+                    String VoteAverage = resultsObj.getString(moviesVoteAverage);
+                    String ReleaseDate = resultsObj.getString(moviesReleaseDate);
+
+                    System.out.println( "moviesTitle: " + Title);
+                    System.out.println( "moviePosterPathURL: " + PosterPathURL);
+                    System.out.println( "movieOverview: " + Overview);
+                    System.out.println( "moviesVoteAverage: " + VoteAverage);
+                    System.out.println( "moviesReleaseDate: " + ReleaseDate);
+
+
+                }
+
+
             } catch (IOException e) {
-                Log.e("PlaceholderFragment", "Error ", e);
+                Log.e("PopularMoviesFragment", "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
                 // to parse it.
                 return null;
+            } catch (JSONException e) {
+                Log.v(LOG_TAG, "JSONexception");
             } finally{
                 if (urlConnection != null) {
                     urlConnection.disconnect();
@@ -100,7 +190,7 @@ public class PopularMoviesFragment extends Fragment {
                     try {
                         reader.close();
                     } catch (final IOException e) {
-                        Log.e("PlaceholderFragment", "Error closing stream", e);
+                        Log.e("PopularMoviesFragment", "Error closing stream", e);
                     }
                 }
             }

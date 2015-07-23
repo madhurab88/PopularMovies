@@ -44,7 +44,7 @@ public class ImageAdapter extends BaseAdapter {
         }
 
         Picasso.with(imageContext).load(sampleImages[position])
-                                  .noFade().resize(342,342)
+                                  .noFade().resize(185,185)
                                   .centerCrop()
                                   .into(imageView);
         return imageView;
