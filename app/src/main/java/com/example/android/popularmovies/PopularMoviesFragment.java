@@ -1,19 +1,16 @@
 package com.example.android.popularmovies;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.GridView;
-import android.widget.ImageView;
+import com.example.android.popularmovies.MovieDetails;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,7 +23,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -34,17 +30,26 @@ import java.util.List;
  */
 public class PopularMoviesFragment extends Fragment {
 
-    String[] moviePosterPathURLArray;
-
+    private final String LOG_TAG = PopularMoviesFragment.class.getSimpleName();
+    ArrayList<MovieDetails> moviePosterPathURLArray;
+    private ImageAdapter ia;
+    private GridView gridview;
 
     public PopularMoviesFragment() {
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
-                super.onCreate(savedInstanceState);
-                // Add this line in order for this fragment to handle menu events.
+        super.onCreate(savedInstanceState);
+        // Add this line in order for this fragment to handle menu events.
         fetchMoviesTask moviestask = new fetchMoviesTask();
+
         moviestask.execute();
     }
 
@@ -52,32 +57,29 @@ public class PopularMoviesFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-        GridView gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
-        gridview.setAdapter(new ImageAdapter(getActivity()));
+        gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
+        //Log.v(LOG_TAG, "moviePosterPathURLArray" + moviePosterPathURLArray.size());
+
+
+
         return rootView;
     }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-
-
     public class fetchMoviesTask extends AsyncTask <Void, Void, Void> {
 
         private final String LOG_TAG = fetchMoviesTask.class.getSimpleName();
 
-        private String[] getMoviesDataFromJson(String moviesDetailsJsonStr) throws JSONException {
+        private ArrayList<MovieDetails> getMoviesDataFromJson(String moviesDetailsJsonStr) throws JSONException {
 
             final String mdb_results = "results";
             JSONObject movieDetailsobj = new JSONObject(moviesDetailsJsonStr);
             JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
 
 
-             moviePosterPathURLArray = new String[ResultsArray.length()];
+            moviePosterPathURLArray = new ArrayList<MovieDetails>();
+            MovieDetails movieDetails = null;
             for(int i = 0; i < ResultsArray.length(); i++) {
 
+                movieDetails = new MovieDetails();
                 JSONObject resultsObj = ResultsArray.getJSONObject(i);
 
                 String moviesTitle = "title";
@@ -85,27 +87,16 @@ public class PopularMoviesFragment extends Fragment {
                 String movieOverview = "overview";
                 String moviesVoteAverage = "vote_average";
                 String moviesReleaseDate = "release_date";
-                final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
-                final String imageSize = "w185";
 
-                String Title = resultsObj.getString(moviesTitle);
-                String PosterPath = resultsObj.getString(moviePosterPath);
-                String PosterPathURL = baseURLMovieImagesURL+imageSize+PosterPath;
-                String Overview = resultsObj.getString(movieOverview);
-                String VoteAverage = resultsObj.getString(moviesVoteAverage);
-                String ReleaseDate = resultsObj.getString(moviesReleaseDate);
+                movieDetails.setMoviesTitle(resultsObj.getString(moviesTitle));
+                movieDetails.setMoviePosterPath(resultsObj.getString(moviePosterPath));
+                movieDetails.setMovieOverview(resultsObj.getString(movieOverview));
+                movieDetails.setMoviesVoteAverage(resultsObj.getString(moviesVoteAverage));
+                movieDetails.setMoviesReleaseDate(resultsObj.getString(moviesReleaseDate));
 
-                moviePosterPathURLArray[i] = PosterPathURL;
-
-                    /*System.out.println( "moviesTitle: " + Title);
-                    System.out.println( "moviePosterPathURL: " + PosterPathURL);
-                    System.out.println( "arraycontent " + moviePosterPathURLArray[i]);
-                    System.out.println( "movieOverview: " + Overview);
-                    System.out.println( "moviesVoteAverage: " + VoteAverage);
-                    System.out.println( "moviesReleaseDate: " + ReleaseDate);*/
+                moviePosterPathURLArray.add(movieDetails);
             }
             return moviePosterPathURLArray;
-
         }
 
 
@@ -113,12 +104,8 @@ public class PopularMoviesFragment extends Fragment {
         @Override
         protected Void doInBackground(Void... params) {
 
-            // These two need to be declared outside the try/catch
-            // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
-
-            // Will contain the raw JSON response as a string.
             String moviesDetailsJsonStr = null;
             String query_string = "popularity.desc";
             String api_key_value = "ec68b0639a7fadca7767c9f77b4e6c0b";
@@ -132,9 +119,9 @@ public class PopularMoviesFragment extends Fragment {
                 final String QUERY_PARAM = "sort_by";
                 final String API_KEY = "api_key";
                 Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                                               .appendQueryParameter(QUERY_PARAM,query_string)
-                                                .appendQueryParameter(API_KEY,api_key_value)
-                                                .build();
+                        .appendQueryParameter(QUERY_PARAM,query_string)
+                        .appendQueryParameter(API_KEY,api_key_value)
+                        .build();
 
                 URL url = new URL(builtUri.toString());
                 Log.v(LOG_TAG, "Built URI " + builtUri.toString());
@@ -155,9 +142,6 @@ public class PopularMoviesFragment extends Fragment {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    // Since it's JSON, adding a newline isn't necessary (it won't affect parsing)
-                    // But it does make debugging a *lot* easier if you print out the completed
-                    // buffer for debugging.
                     buffer.append(line + "\n");
                 }
 
@@ -171,12 +155,11 @@ public class PopularMoviesFragment extends Fragment {
 
                 try {
                     getMoviesDataFromJson(moviesDetailsJsonStr);
+                    Log.v(LOG_TAG, "LogTest1 ----" + moviePosterPathURLArray.size());
+
                 } catch (JSONException e) {
                     Log.v(LOG_TAG, "JSONException");
                 }
-
-
-
 
             } catch (IOException e) {
                 Log.e("PopularMoviesFragment", "Error ", e);
@@ -195,9 +178,16 @@ public class PopularMoviesFragment extends Fragment {
                     }
                 }
             }
-
-
             return null;
         }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            ia = new ImageAdapter(getActivity().getBaseContext(), moviePosterPathURLArray);
+            gridview.setAdapter(ia);
+            super.onPostExecute(aVoid);
+        }
+
+
     }
 }

@@ -1,27 +1,32 @@
 package com.example.android.popularmovies;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-
 import android.widget.ImageView;
-
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+
 
 /**
  * Created by Madhu on 7/15/15.
  */
 public class ImageAdapter extends BaseAdapter {
+    private final String LOG_TAG = ImageAdapter.class.getSimpleName();
 
     private Context imageContext;
+    private ArrayList<MovieDetails> movieImages;
 
-    public ImageAdapter(Context imageContext) {
+    public ImageAdapter(Context imageContext, ArrayList<MovieDetails> movieImages) {
         this.imageContext = imageContext;
+        this.movieImages = movieImages;
     }
 
     public int getCount() {
-        return sampleImages.length;
+        return this.movieImages.size();
     }
 
     public Object getItem(int position) {
@@ -39,45 +44,14 @@ public class ImageAdapter extends BaseAdapter {
         ImageView imageView;
         //check to see if we have a view
         if (convertView == null) {
-            imageView = new ImageView(imageContext);
+            imageView = new ImageView(this.imageContext);
         } else {
             imageView = (ImageView) convertView;
         }
-
-        //String moviePosterUrl = PosterPathURL;
-        Picasso.with(imageContext).load("http://image.tmdb.org/t/p/w185/nBNZadXqJSdt05SHLqgT0HuC5Gm.jpg")
-                                  .noFade().resize(185,185)
-                                  .centerCrop()
-                                  .into(imageView);
+        Picasso.with(this.imageContext).load(this.movieImages.get(position).getPosterPathURL())
+                .noFade().resize(185,185)
+                .centerCrop()
+                .into(imageView);
         return imageView;
     }
-    // references to our images
-    private Integer[] sampleImages = {
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7,
-            R.drawable.sample_0, R.drawable.sample_1,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_8, R.drawable.sample_9,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7,
-            R.drawable.sample_0, R.drawable.sample_1,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_8, R.drawable.sample_9,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7,
-            R.drawable.sample_0, R.drawable.sample_1,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7,
-            R.drawable.sample_8, R.drawable.sample_9,
-            R.drawable.sample_0, R.drawable.sample_1,
-            R.drawable.sample_2, R.drawable.sample_3,
-            R.drawable.sample_4, R.drawable.sample_5,
-            R.drawable.sample_6, R.drawable.sample_7
-    };
 }
