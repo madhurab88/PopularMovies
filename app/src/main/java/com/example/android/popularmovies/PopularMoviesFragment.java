@@ -1,6 +1,7 @@
 package com.example.android.popularmovies;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -9,7 +10,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.GridView;
+import android.widget.Toast;
+import android.widget.AdapterView.OnItemClickListener;
+
 import com.example.android.popularmovies.MovieDetails;
 
 import org.json.JSONArray;
@@ -58,7 +63,9 @@ public class PopularMoviesFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
-        //Log.v(LOG_TAG, "moviePosterPathURLArray" + moviePosterPathURLArray.size());
+
+
+
 
 
 
@@ -185,7 +192,30 @@ public class PopularMoviesFragment extends Fragment {
         protected void onPostExecute(Void aVoid) {
             ia = new ImageAdapter(getActivity().getBaseContext(), moviePosterPathURLArray);
             gridview.setAdapter(ia);
-            super.onPostExecute(aVoid);
+            gridview.setOnItemClickListener(new OnItemClickListener() {
+                public void onItemClick(AdapterView<?> parent, View v,
+                                        int position, long id) {
+                    //Toast.makeText(getActivity(), "" + position, Toast.LENGTH_SHORT).show();
+
+                    MovieDetails md = moviePosterPathURLArray.get(position);
+
+
+                    //String mtitle = md.getMoviesTitle();
+
+                    //Intent detailIntent = new Intent(getActivity(), DetailActivity.class)
+                           // .putExtra(Intent.EXTRA_TEXT, (mtitle));
+                    Bundle b = new Bundle();
+                    b.putStringArray("MOVIE_DETAILS_ARRAY", new String[]{md.getMoviesTitle(),
+                                                                         md.getMovieOverview(),
+                            md.getPosterPathURL(),md.getMoviesVoteAverage(),md.getMoviesReleaseDate()
+                    });
+                    Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
+                    detailIntent.putExtras(b);
+
+                    startActivity(detailIntent);
+                }
+            });
+
         }
 
 
