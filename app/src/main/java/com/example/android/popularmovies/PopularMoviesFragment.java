@@ -111,7 +111,7 @@ public class PopularMoviesFragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String moviesDetailsJsonStr = null;
-            String api_key_value = "ec68b0639a7fadca7767c9f77b4e6c0b";
+            String api_key_value = "";
 
             try {
                 // Construct the URL for the themoviedb.org API for query
