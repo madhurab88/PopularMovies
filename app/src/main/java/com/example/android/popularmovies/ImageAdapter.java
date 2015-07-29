@@ -19,19 +19,11 @@ public class ImageAdapter extends BaseAdapter {
 
     private Context imageContext;
     private ArrayList<MovieDetails> movieImages;
-    private String url;
-
-    public ImageAdapter(Context imageContext, String url) {
-        this.imageContext = imageContext;
-        this.url = url;
-    }
 
     public ImageAdapter(Context imageContext, ArrayList<MovieDetails> movieImages) {
         this.imageContext = imageContext;
         this.movieImages = movieImages;
     }
-
-
 
     public int getCount() {
         return this.movieImages.size();
@@ -57,7 +49,7 @@ public class ImageAdapter extends BaseAdapter {
             imageView = (ImageView) convertView;
         }
         Picasso.with(this.imageContext).load(this.movieImages.get(position).getPosterPathURL())
-                .noFade().resize(185,287)
+                .noFade().resize(185,277)
                 .centerCrop()
                 .into(imageView);
         return imageView;

@@ -5,19 +5,17 @@ package com.example.android.popularmovies;
  */
 public class MovieDetails {
 
+    final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
+    final String imageSize = "w185";
     private String moviesTitle = "title";
     private String moviePosterPath = "poster_path";
     private String movieOverview = "overview";
     private String moviesVoteAverage = "vote_average";
-    final String baseURLMovieImagesURL = "http://image.tmdb.org/t/p/";
-    final String imageSize = "w185";
-    private String PosterPathURL = null;
+    private String moviesReleaseDate = "release_date";
 
     public String getPosterPathURL() {
-        return baseURLMovieImagesURL+imageSize+getMoviePosterPath();
+        return baseURLMovieImagesURL + imageSize + getMoviePosterPath();
     }
-
-
 
     public String getMovieOverview() {
         return movieOverview;
@@ -58,6 +56,4 @@ public class MovieDetails {
     public void setMoviesVoteAverage(String moviesVoteAverage) {
         this.moviesVoteAverage = moviesVoteAverage;
     }
-
-    private String moviesReleaseDate = "release_date";
 }

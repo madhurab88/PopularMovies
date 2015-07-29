@@ -2,8 +2,10 @@ package com.example.android.popularmovies;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
@@ -46,16 +48,18 @@ public class PopularMoviesFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-
+        fetchMoviesTask moviestask = new fetchMoviesTask();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String sortOption = prefs.getString(getString(R.string.sort_by_key),
+                getString(R.string.sort_by_default));
+        moviestask.execute(sortOption);
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Add this line in order for this fragment to handle menu events.
-        fetchMoviesTask moviestask = new fetchMoviesTask();
 
-        moviestask.execute();
     }
 
     @Override
@@ -63,15 +67,10 @@ public class PopularMoviesFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
-
-
-
-
-
-
         return rootView;
     }
-    public class fetchMoviesTask extends AsyncTask <Void, Void, Void> {
+
+    public class fetchMoviesTask extends AsyncTask<String, Void, Void> {
 
         private final String LOG_TAG = fetchMoviesTask.class.getSimpleName();
 
@@ -81,10 +80,9 @@ public class PopularMoviesFragment extends Fragment {
             JSONObject movieDetailsobj = new JSONObject(moviesDetailsJsonStr);
             JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
 
-
             moviePosterPathURLArray = new ArrayList<MovieDetails>();
             MovieDetails movieDetails = null;
-            for(int i = 0; i < ResultsArray.length(); i++) {
+            for (int i = 0; i < ResultsArray.length(); i++) {
 
                 movieDetails = new MovieDetails();
                 JSONObject resultsObj = ResultsArray.getJSONObject(i);
@@ -106,34 +104,29 @@ public class PopularMoviesFragment extends Fragment {
             return moviePosterPathURLArray;
         }
 
-
         @SuppressLint("LongLogTag")
         @Override
-        protected Void doInBackground(Void... params) {
+        protected Void doInBackground(String... params) {
 
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String moviesDetailsJsonStr = null;
-            String query_string = "popularity.desc";
             String api_key_value = "ec68b0639a7fadca7767c9f77b4e6c0b";
 
             try {
                 // Construct the URL for the themoviedb.org API for query
-
-                //URL url = new URL("http://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc&api_key=ec68b0639a7fadca7767c9f77b4e6c0b");
-
                 final String FORECAST_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
                 final String QUERY_PARAM = "sort_by";
                 final String API_KEY = "api_key";
+
                 Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(QUERY_PARAM,query_string)
-                        .appendQueryParameter(API_KEY,api_key_value)
+                        .appendQueryParameter(QUERY_PARAM, params[0])
+                        .appendQueryParameter(API_KEY, api_key_value)
                         .build();
 
                 URL url = new URL(builtUri.toString());
-                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
-                // Create the request to OpenWeatherMap, and open the connection
+                // Create the request to themoviedb.org API, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
@@ -156,24 +149,18 @@ public class PopularMoviesFragment extends Fragment {
                     // Stream was empty.  No point in parsing.
                     return null;
                 }
-
                 moviesDetailsJsonStr = buffer.toString();
-                Log.v(LOG_TAG, "MoviepathJSONString" + moviesDetailsJsonStr.toString());
 
                 try {
                     getMoviesDataFromJson(moviesDetailsJsonStr);
-                    Log.v(LOG_TAG, "LogTest1 ----" + moviePosterPathURLArray.size());
-
                 } catch (JSONException e) {
                     Log.v(LOG_TAG, "JSONException");
                 }
 
             } catch (IOException e) {
                 Log.e("PopularMoviesFragment", "Error ", e);
-                // If the code didn't successfully get the weather data, there's no point in attemping
-                // to parse it.
                 return null;
-            }  finally{
+            } finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -195,23 +182,16 @@ public class PopularMoviesFragment extends Fragment {
             gridview.setOnItemClickListener(new OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View v,
                                         int position, long id) {
-                    //Toast.makeText(getActivity(), "" + position, Toast.LENGTH_SHORT).show();
-
                     MovieDetails md = moviePosterPathURLArray.get(position);
 
-
-                    //String mtitle = md.getMoviesTitle();
-
-                    //Intent detailIntent = new Intent(getActivity(), DetailActivity.class)
-                           // .putExtra(Intent.EXTRA_TEXT, (mtitle));
+                    //Using Bundle to send an array of data from this Fragment to detail Fragment
                     Bundle b = new Bundle();
                     b.putStringArray("MOVIE_DETAILS_ARRAY", new String[]{md.getMoviesTitle(),
-                                                                         md.getMovieOverview(),
-                            md.getPosterPathURL(),md.getMoviesVoteAverage(),md.getMoviesReleaseDate()
+                            md.getMovieOverview(),
+                            md.getPosterPathURL(), md.getMoviesVoteAverage(), md.getMoviesReleaseDate()
                     });
                     Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
                     detailIntent.putExtras(b);
-
                     startActivity(detailIntent);
                 }
             });
