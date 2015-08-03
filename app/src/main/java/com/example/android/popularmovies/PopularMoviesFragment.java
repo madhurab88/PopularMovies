@@ -71,7 +71,6 @@ public class PopularMoviesFragment extends Fragment {
         }
 
 
-
     }
 
     @Override
@@ -220,7 +219,6 @@ public class PopularMoviesFragment extends Fragment {
             }
             return null;
         }
-
 
 
         @Override
