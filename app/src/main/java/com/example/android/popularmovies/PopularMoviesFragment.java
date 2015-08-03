@@ -1,14 +1,18 @@
 package com.example.android.popularmovies;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,6 +34,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 /**
@@ -39,6 +44,7 @@ public class PopularMoviesFragment extends Fragment {
 
     private final String LOG_TAG = PopularMoviesFragment.class.getSimpleName();
     ArrayList<MovieDetails> moviePosterPathURLArray;
+    MovieDetails movieDetails = null;
     private ImageAdapter ia;
     private GridView gridview;
 
@@ -58,8 +64,20 @@ public class PopularMoviesFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Add this line in order for this fragment to handle menu events.
+        if (savedInstanceState == null || !savedInstanceState.containsKey("movies")) {
+            moviePosterPathURLArray = new ArrayList<MovieDetails>(Arrays.asList(movieDetails));
+        } else {
+            moviePosterPathURLArray = savedInstanceState.getParcelableArrayList("movies");
+        }
 
+
+
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        outState.putParcelableArrayList("movies", moviePosterPathURLArray);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -67,7 +85,23 @@ public class PopularMoviesFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
+
         return rootView;
+    }
+
+    public boolean isNetworkOnline() {
+        boolean status = false;
+
+        ConnectivityManager cm = (ConnectivityManager) getActivity().getBaseContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo netInfo = cm.getNetworkInfo(0);
+        if (netInfo != null && netInfo.getState() == NetworkInfo.State.CONNECTED) {
+            status = true;
+        } else {
+            netInfo = cm.getNetworkInfo(1);
+            if (netInfo != null && netInfo.getState() == NetworkInfo.State.CONNECTED)
+                status = true;
+        }
+        return status;
     }
 
     public class fetchMoviesTask extends AsyncTask<String, Void, Void> {
@@ -81,7 +115,7 @@ public class PopularMoviesFragment extends Fragment {
             JSONArray ResultsArray = movieDetailsobj.getJSONArray(mdb_results);
 
             moviePosterPathURLArray = new ArrayList<MovieDetails>();
-            MovieDetails movieDetails = null;
+
             for (int i = 0; i < ResultsArray.length(); i++) {
 
                 movieDetails = new MovieDetails();
@@ -115,6 +149,7 @@ public class PopularMoviesFragment extends Fragment {
 
             try {
                 // Construct the URL for the themoviedb.org API for query
+
                 final String FORECAST_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
                 final String QUERY_PARAM = "sort_by";
                 final String API_KEY = "api_key";
@@ -125,40 +160,51 @@ public class PopularMoviesFragment extends Fragment {
                         .build();
 
                 URL url = new URL(builtUri.toString());
+                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                if (isNetworkOnline()) {
+                    // Create the request to OpenWeatherMap, and open the connection
+                    urlConnection = (HttpURLConnection) url.openConnection();
+                    urlConnection.setRequestMethod("GET");
+                    urlConnection.connect();
 
-                // Create the request to themoviedb.org API, and open the connection
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
+                    // Read the input stream into a String
+                    InputStream inputStream = urlConnection.getInputStream();
+                    StringBuffer buffer = new StringBuffer();
+                    if (inputStream == null) {
+                        // Nothing to do.
+                        return null;
+                    }
+                    reader = new BufferedReader(new InputStreamReader(inputStream));
 
-                // Read the input stream into a String
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-                if (inputStream == null) {
-                    // Nothing to do.
-                    return null;
-                }
-                reader = new BufferedReader(new InputStreamReader(inputStream));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        buffer.append(line + "\n");
+                    }
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line + "\n");
-                }
+                    if (buffer.length() == 0) {
+                        // Stream was empty.  No point in parsing.
+                        return null;
+                    }
 
-                if (buffer.length() == 0) {
-                    // Stream was empty.  No point in parsing.
-                    return null;
-                }
-                moviesDetailsJsonStr = buffer.toString();
+                    moviesDetailsJsonStr = buffer.toString();
+                    Log.v(LOG_TAG, "MoviepathJSONString" + moviesDetailsJsonStr.toString());
 
-                try {
-                    getMoviesDataFromJson(moviesDetailsJsonStr);
-                } catch (JSONException e) {
-                    Log.v(LOG_TAG, "JSONException");
+                    try {
+                        getMoviesDataFromJson(moviesDetailsJsonStr);
+                        Log.v(LOG_TAG, "Error getting Data from JSON" + moviePosterPathURLArray.size());
+
+                    } catch (JSONException e) {
+                        Log.v(LOG_TAG, "JSONException");
+                    }
+                } else {
+
+                    Log.d(LOG_TAG, "Internet Connection Not Available");
                 }
 
             } catch (IOException e) {
                 Log.e("PopularMoviesFragment", "Error ", e);
+                // If the code didn't successfully get the weather data, there's no point in attemping
+                // to parse it.
                 return null;
             } finally {
                 if (urlConnection != null) {
@@ -175,16 +221,20 @@ public class PopularMoviesFragment extends Fragment {
             return null;
         }
 
+
+
         @Override
         protected void onPostExecute(Void aVoid) {
             ia = new ImageAdapter(getActivity().getBaseContext(), moviePosterPathURLArray);
+
             gridview.setAdapter(ia);
+
             gridview.setOnItemClickListener(new OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View v,
                                         int position, long id) {
+
                     MovieDetails md = moviePosterPathURLArray.get(position);
 
-                    //Using Bundle to send an array of data from this Fragment to detail Fragment
                     Bundle b = new Bundle();
                     b.putStringArray("MOVIE_DETAILS_ARRAY", new String[]{md.getMoviesTitle(),
                             md.getMovieOverview(),
@@ -192,6 +242,7 @@ public class PopularMoviesFragment extends Fragment {
                     });
                     Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
                     detailIntent.putExtras(b);
+
                     startActivity(detailIntent);
                 }
             });
