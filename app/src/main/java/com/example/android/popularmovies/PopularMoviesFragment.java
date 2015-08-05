@@ -34,43 +34,60 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
-
-
 /**
  * A placeholder fragment containing a simple view.
  */
 public class PopularMoviesFragment extends Fragment {
 
     private final String LOG_TAG = PopularMoviesFragment.class.getSimpleName();
-    ArrayList<MovieDetails> moviePosterPathURLArray;
+    ArrayList<MovieDetails> moviePosterPathURLArray = null;
     MovieDetails movieDetails = null;
     private ImageAdapter ia;
     private GridView gridview;
-
-    public PopularMoviesFragment() {
-    }
+    private boolean isOnlineFlag = false;
+    private boolean hasSavedBundle = false;
+    private boolean hasPrefChanged = false;
+    private String prefValue = null;
 
     @Override
-    public void onStart() {
-        super.onStart();
-        fetchMoviesTask moviestask = new fetchMoviesTask();
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String sortOption = prefs.getString(getString(R.string.sort_by_key),
-                getString(R.string.sort_by_default));
-        moviestask.execute(sortOption);
+    public void onResume() {
+        super.onResume();
+        String currentSortPref = getSortPref();
+        if (!currentSortPref.equals(R.string.sort_by_default) || moviePosterPathURLArray == null) {
+            fetchMoviesTask moviestask = new fetchMoviesTask();
+            moviestask.execute(currentSortPref);
+        }
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (savedInstanceState == null || !savedInstanceState.containsKey("movies")) {
-            moviePosterPathURLArray = new ArrayList<MovieDetails>(Arrays.asList(movieDetails));
+        if (savedInstanceState == null ) {
+            hasSavedBundle = false;
         } else {
-            moviePosterPathURLArray = savedInstanceState.getParcelableArrayList("movies");
+            if(savedInstanceState.getParcelableArrayList("movies") == null){
+                hasSavedBundle = false;
+            }else {
+                hasSavedBundle = true;
+                moviePosterPathURLArray = savedInstanceState.getParcelableArrayList("movies");
+            }
+
+        }
+        fetchMoviesTask moviesTask = new fetchMoviesTask();
+        moviesTask.execute(getSortPref());
+    }
+
+    private String getSortPref() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        if(prefValue == null){
+            prefValue = prefs.getString(getString(R.string.sort_by_key), getString(R.string.sort_by_default));
         }
 
-
+        if(!prefValue.equals(prefs.getString(getString(R.string.sort_by_key), getString(R.string.sort_by_default)))){
+            hasPrefChanged = true;
+            prefValue = prefs.getString(getString(R.string.sort_by_key), getString(R.string.sort_by_default));
+        }
+        return prefValue;
     }
 
     @Override
@@ -84,7 +101,6 @@ public class PopularMoviesFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
         gridview = (GridView) rootView.findViewById(R.id.grid_item_movies);
-
         return rootView;
     }
 
@@ -144,65 +160,57 @@ public class PopularMoviesFragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String moviesDetailsJsonStr = null;
-            String api_key_value = "";
-
             try {
-                // Construct the URL for the themoviedb.org API for query
-
-                final String FORECAST_BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
-                final String QUERY_PARAM = "sort_by";
-                final String API_KEY = "api_key";
-
-                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(QUERY_PARAM, params[0])
-                        .appendQueryParameter(API_KEY, api_key_value)
-                        .build();
-
-                URL url = new URL(builtUri.toString());
-                Log.v(LOG_TAG, "Built URI " + builtUri.toString());
+                //Make API call if Internet Connection is available
                 if (isNetworkOnline()) {
-                    // Create the request to OpenWeatherMap, and open the connection
-                    urlConnection = (HttpURLConnection) url.openConnection();
-                    urlConnection.setRequestMethod("GET");
-                    urlConnection.connect();
+                    isOnlineFlag = true;
+                    if(!hasSavedBundle || hasPrefChanged) {
+                        Uri builtUri = Uri.parse(getString(R.string.FORECAST_BASE_URL)).buildUpon()
+                                .appendQueryParameter(getString(R.string.QUERY_PARAM), params[0])
+                                .appendQueryParameter(getString(R.string.API_KEY), getString(R.string.api_key_value))
+                                .build();
+                        // Construct the URL for the themoviedb.org API for query
+                        URL url = new URL(builtUri.toString());
+                        //Log.v(LOG_TAG, "Built URI " + builtUri.toString());
 
-                    // Read the input stream into a String
-                    InputStream inputStream = urlConnection.getInputStream();
-                    StringBuffer buffer = new StringBuffer();
-                    if (inputStream == null) {
-                        // Nothing to do.
-                        return null;
-                    }
-                    reader = new BufferedReader(new InputStreamReader(inputStream));
+                        // Create the request to Moviedb API, and open the connection
+                        urlConnection = (HttpURLConnection) url.openConnection();
+                        urlConnection.setRequestMethod("GET");
+                        urlConnection.connect();
 
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        buffer.append(line + "\n");
-                    }
+                        // Read the input stream into a String
+                        InputStream inputStream = urlConnection.getInputStream();
+                        StringBuffer buffer = new StringBuffer();
+                        if (inputStream == null) {
+                            // Nothing to do.
+                            return null;
+                        }
+                        reader = new BufferedReader(new InputStreamReader(inputStream));
 
-                    if (buffer.length() == 0) {
-                        // Stream was empty.  No point in parsing.
-                        return null;
-                    }
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            buffer.append(line + "\n");
+                        }
 
-                    moviesDetailsJsonStr = buffer.toString();
-                    Log.v(LOG_TAG, "MoviepathJSONString" + moviesDetailsJsonStr.toString());
-
-                    try {
-                        getMoviesDataFromJson(moviesDetailsJsonStr);
-                        Log.v(LOG_TAG, "Error getting Data from JSON" + moviePosterPathURLArray.size());
-
-                    } catch (JSONException e) {
-                        Log.v(LOG_TAG, "JSONException");
+                        if (buffer.length() == 0) {
+                            // Stream was empty.  No point in parsing.
+                            return null;
+                        }
+                        moviesDetailsJsonStr = buffer.toString();
+                        try {
+                            getMoviesDataFromJson(moviesDetailsJsonStr);
+                        } catch (JSONException e) {
+                            Log.e(LOG_TAG, "JSONException",e);
+                            return null;
+                        }
                     }
                 } else {
-
-                    Log.d(LOG_TAG, "Internet Connection Not Available");
+                    isOnlineFlag = false;
                 }
 
             } catch (IOException e) {
                 Log.e("PopularMoviesFragment", "Error ", e);
-                // If the code didn't successfully get the weather data, there's no point in attemping
+                // If the code didn't successfully get the movies data, there's no point in attemping
                 // to parse it.
                 return null;
             } finally {
@@ -223,28 +231,35 @@ public class PopularMoviesFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            ia = new ImageAdapter(getActivity().getBaseContext(), moviePosterPathURLArray);
 
-            gridview.setAdapter(ia);
+            if (!isOnlineFlag) {
+                //Show the toast message when there is no internet connection
+                Toast toast = Toast.makeText(getActivity(), "Check Internet Connection...", Toast.LENGTH_SHORT);
+                toast.show();
+            }
+            //Set the adapter only if there is Internet connection or if there the data is available from savedInstanceBundle
+            if (hasSavedBundle || isOnlineFlag) {
+                ia = new ImageAdapter(getActivity().getBaseContext(), moviePosterPathURLArray);
 
-            gridview.setOnItemClickListener(new OnItemClickListener() {
-                public void onItemClick(AdapterView<?> parent, View v,
-                                        int position, long id) {
+                gridview.setAdapter(ia);
 
-                    MovieDetails md = moviePosterPathURLArray.get(position);
+                gridview.setOnItemClickListener(new OnItemClickListener() {
+                    public void onItemClick(AdapterView<?> parent, View v,
+                                            int position, long id) {
 
-                    Bundle b = new Bundle();
-                    b.putStringArray("MOVIE_DETAILS_ARRAY", new String[]{md.getMoviesTitle(),
-                            md.getMovieOverview(),
-                            md.getPosterPathURL(), md.getMoviesVoteAverage(), md.getMoviesReleaseDate()
-                    });
-                    Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
-                    detailIntent.putExtras(b);
+                        MovieDetails md = moviePosterPathURLArray.get(position);
 
-                    startActivity(detailIntent);
-                }
-            });
-
+                        Bundle b = new Bundle();
+                        b.putStringArray("MOVIE_DETAILS_ARRAY", new String[]{md.getMoviesTitle(),
+                                md.getMovieOverview(),
+                                md.getPosterPathURL(), md.getMoviesVoteAverage(), md.getMoviesReleaseDate()
+                        });
+                        Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
+                        detailIntent.putExtras(b);
+                        startActivity(detailIntent);
+                    }
+                });
+            }
         }
 
 
